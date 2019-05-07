@@ -196,6 +196,7 @@ function loadConfig(filepath) {
   filepath = path.resolve(filepath);
   if (!existsSync(filepath)) return {};
   const loader = joycon.findLoader(filepath);
+  if (!loader) return {};
   const data = loader.loadSync(filepath);
   return { path, data };
 }
