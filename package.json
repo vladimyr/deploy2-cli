@@ -7,8 +7,7 @@
     "deploy2": "cli.js"
   },
   "files": [
-    "cli.js",
-    "npm-shrinkwrap.json"
+    "cli.js"
   ],
   "scripts": {
     "lint": "eslint ."
