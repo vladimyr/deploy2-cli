@@ -3,7 +3,7 @@
 'use strict';
 
 const { format, promisify } = require('util');
-const { readFileSync } = require('fs');
+const { existsSync, readFileSync } = require('fs');
 const git = require('git-rev-sync');
 const kleur = require('kleur');
 const logSymbols = require('log-symbols');
@@ -17,9 +17,11 @@ const stripJsonComments = require('strip-json-comments');
 const toml = require('toml');
 
 const CONFIG_FILES = ['.deployrc', '.deployrc.js', 'deploy.toml'];
+const FALLBACK_CONFIG_FILES = ['ecosystem.config.js', 'ecosystem.config.mjs', 'ecosystem.json'];
 const LOG_PREFIX = '-->';
 const SHELL_OP_AND = '&&';
 
+const isEcosystemConfig = config => FALLBACK_CONFIG_FILES.includes(path.basename(config));
 const isValidationError = err => err.constructor.name === 'ValidationError';
 const formatCode = arg => `\`${arg}\``;
 const formatError = msg => msg.replace(/^\w*Error:\s+/, match => kleur.red().bold(match));
@@ -43,7 +45,7 @@ const logSuccess = (msg, ...args) => console.error(logSymbols.success, format(ms
 const logInfo = (msg, ...args) => console.error(logSymbols.info, format(msg, ...args));
 
 const joycon = new JoyCon({
-  files: CONFIG_FILES,
+  files: [...CONFIG_FILES, ...FALLBACK_CONFIG_FILES],
   parseJSON
 });
 joycon.addLoader({
@@ -53,6 +55,14 @@ joycon.addLoader({
 joycon.addLoader({
   test: /\.toml$/,
   loadSync: path => toml.parse(readFileSync(path, 'utf-8'))
+});
+joycon.addLoader({
+  test: /\.json$/,
+  loadSync: path => parseJSON(readFileSync(path, 'utf-8'))
+});
+joycon.addLoader({
+  test: /\.m?js$/,
+  loadSync: path => require(path)
 });
 
 const description = `${kleur.bold(pkg.name)} v${pkg.version} - ${pkg.description}`;
@@ -108,13 +118,19 @@ function program(cli) {
   }
 
   // Try to load configuration.
-  const { config, configPath } = loadConfig(cli.flags.config);
-  if (!config) {
+  const { data, path: configPath } = loadConfig(cli.flags.config);
+  if (!configPath) {
     logError(
       'Error: Configuration file not found.\n[Allowed configuration formats: %s]',
       CONFIG_FILES.join(', ')
     );
     process.exit(1);
+  }
+  // Read `exports.deploy` if PM2 ecosystem config is being used.
+  const config = isEcosystemConfig(configPath) ? data.deploy : data;
+  if (!config || Object.keys(config).length <= 0) {
+    logError('Error: Malformed configuration file.\nNo environments specified.');
+    return process.exit(1);
   }
 
   logInfo('Using deployment config:', kleur.white(configPath));
@@ -174,20 +190,13 @@ function program(cli) {
   return deploy(config, env, cli.input).finally(() => (console.log = log));
 }
 
-function loadConfig(config) {
-  const options = {};
-  if (config) {
-    const filepath = path.resolve(config);
-    const filename = path.basename(filepath);
-    const parentDir = path.dirname(filepath);
-    Object.assign(options, {
-      files: [filename],
-      cwd: parentDir,
-      stopDir: path.dirname(parentDir)
-    });
-  }
-  const { data, path: configPath } = joycon.loadSync(options);
-  return { config: data, configPath };
+function loadConfig(filepath) {
+  if (!filepath) return joycon.loadSync();
+  filepath = path.resolve(filepath);
+  if (!existsSync(filepath)) return {};
+  const loader = joycon.findLoader(filepath);
+  const data = loader.loadSync(filepath);
+  return { path, data };
 }
 
 function showCommands(indent = '  ') {
