@@ -106,7 +106,7 @@ function program(cli) {
   if (!config[env]) {
     logError(
       'Error: %s environment is not defined inside configuration file: %s',
-      kleur.cyan(env),
+      kleur.white(env),
       kleur.white(path.basename(configPath))
     );
     process.exit(1);
