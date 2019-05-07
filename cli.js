@@ -16,14 +16,13 @@ const pkg = require('./package.json');
 const stripJsonComments = require('strip-json-comments');
 const toml = require('toml');
 
-const CONFIG_FILES = ['.deploy', '.deployrc.js', 'deploy.toml'];
+const CONFIG_FILES = ['.deployrc', '.deployrc.js', 'deploy.toml'];
 const LOG_PREFIX = '-->';
 const SHELL_OP_AND = '&&';
 
 const isValidationError = err => err.constructor.name === 'ValidationError';
 const formatCode = arg => `\`${arg}\``;
 const formatError = msg => msg.replace(/^\w*Error:\s+/, match => kleur.red().bold(match));
-const noop = () => {};
 const parseJSON = str => JSON.parse(stripJsonComments(str));
 
 const supportsEmoji = process.platform !== 'win32' || process.env.TERM === 'xterm-256color';
@@ -41,6 +40,7 @@ if (supportsEmoji) {
 const logError = (msg, ...args) => console.error(logSymbols.error, formatError(format(msg, ...args)));
 const logWarning = (msg, ...args) => console.error(logSymbols.warning, format(msg, ...args));
 const logSuccess = (msg, ...args) => console.error(logSymbols.success, format(msg, ...args));
+const logInfo = (msg, ...args) => console.error(logSymbols.info, format(msg, ...args));
 
 const joycon = new JoyCon({
   files: CONFIG_FILES,
@@ -71,13 +71,15 @@ Commands
 ${showCommands()}
 
 Options
-  -h, --help       Show help
-  -v, --version    Show version number
+  -c, --config <path>    Set the path to config file
+  -h, --help             Show help
+  -v, --version          Show version number
 
 Homepage:     ${kleur.cyan(pkg.homepage)}
 Report issue: ${kleur.cyan(pkg.bugs.url)}`;
 
 const flags = {
+  config: { alias: 'c', type: 'string' },
   help: { alias: 'h' },
   version: { alias: 'v' }
 };
@@ -105,14 +107,16 @@ function program(cli) {
     process.exit(1);
   }
 
-  const { path: configPath, data: config } = joycon.loadSync();
+  const { config, configPath } = loadConfig(cli.flags.config);
   if (!config) {
     logError(
-      'Error: Configuration file not found.\n[Allowed file names: %s]',
+      'Error: Configuration file not found.\n[Allowed configuration formats: %s]',
       CONFIG_FILES.join(', ')
     );
     process.exit(1);
   }
+
+  logInfo('Using deployment config:', kleur.white(configPath));
 
   const envConfig = config[env];
   if (!config[env]) {
@@ -156,18 +160,34 @@ function program(cli) {
     if (!msg.startsWith(LOG_PREFIX)) return;
     msg = msg.replace(LOG_PREFIX, '');
     if (msg === 'Deploying to %s environment') {
-      return console.error(emoji('🚚'), format(msg), kleur.cyan(envConfig.host));
+      return console.error(emoji('🚚'), format(msg, kleur.cyan(envConfig.host)));
     }
     if (msg === 'on host %s') {
-      return console.error(emoji('⚙️'), format(msg), kleur.cyan(envConfig.host));
+      return console.error(emoji('⚙️'), format(msg, kleur.cyan(envConfig.host)));
     }
   };
   return deploy(config, env, cli.input).finally(() => (console.log = log));
 }
 
+function loadConfig(config) {
+  const options = {};
+  if (config) {
+    const filepath = path.resolve(config);
+    const filename = path.basename(filepath);
+    const parentDir = path.dirname(filepath);
+    Object.assign(options, {
+      files: [filename],
+      cwd: parentDir,
+      stopDir: path.dirname(parentDir)
+    });
+  }
+  const { data, path: configPath } = joycon.loadSync(options);
+  return { config: data, configPath };
+}
+
 function showCommands(indent = '  ') {
   const commands = getCommands();
-  const colWidth = Math.max(...commands.map(it => it.name.length), 16);
+  const colWidth = Math.max(...commands.map(it => it.name.length), 22);
   return commands.map(({ name, desc }) => {
     return `${indent}${name.padEnd(colWidth)} ${desc}`;
   }).join('\n');
