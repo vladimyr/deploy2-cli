@@ -107,6 +107,7 @@ function program(cli) {
     process.exit(1);
   }
 
+  // Try to load configuration.
   const { config, configPath } = loadConfig(cli.flags.config);
   if (!config) {
     logError(
@@ -118,6 +119,7 @@ function program(cli) {
 
   logInfo('Using deployment config:', kleur.white(configPath));
 
+  // Check for environment definition inside config.
   const envConfig = config[env];
   if (!config[env]) {
     logError(
@@ -128,6 +130,7 @@ function program(cli) {
     process.exit(1);
   }
 
+  // Setup `<env>.ref` & `<env>.repo` fallback.
   if (!envConfig.ref) {
     const ref = git.branch();
     logWarning(
@@ -147,6 +150,7 @@ function program(cli) {
     envConfig.repo = repo;
   }
 
+  // Set post deploy action.
   if (!envConfig['post-deploy']) {
     envConfig['post-deploy'] = [
       'npm install',
@@ -155,6 +159,7 @@ function program(cli) {
     ].join(` ${SHELL_OP_AND} `);
   }
 
+  // Proxy `pm-deploy` logs.
   const { log } = console.log;
   console.log = msg => {
     if (!msg.startsWith(LOG_PREFIX)) return;
