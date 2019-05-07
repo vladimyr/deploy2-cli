@@ -43,8 +43,14 @@ joycon.addLoader({
   loadSync: path => toml.parse(readFileSync(path, 'utf-8'))
 });
 
-const commands = getCommands();
 const description = `${kleur.bold(pkg.name)} v${pkg.version} - ${pkg.description}`;
+const version = `
+${kleur.inverse().cyan().bold(` ${pkg.name} `)} v${kleur.bold(pkg.version)}
+
+pm2-deploy         v${kleur.bold(require('pm2-deploy/package.json').version)}
+visionmedia/deploy v${kleur.bold(getDeployVersion())}
+`.trim();
+
 const help = `
 Usage
   $ ${pkg.name} <env> <command>
@@ -64,7 +70,7 @@ const flags = {
   version: { alias: 'v' }
 };
 
-program(meow(help, { description, flags }))
+program(meow(help, { description, version, flags }))
   .then(() => logSuccess('Success'))
   .catch(err => {
     if (isValidationError(err)) {
@@ -145,6 +151,7 @@ function program(cli) {
 }
 
 function showCommands(indent = '  ') {
+  const commands = getCommands();
   const colWidth = Math.max(...commands.map(it => it.name.length), 16);
   return commands.map(({ name, desc }) => {
     return `${indent}${name.padEnd(colWidth)} ${desc}`;
@@ -159,4 +166,13 @@ function getCommands() {
     const [name, desc] = line.split(/\s{2,}/);
     return { name, desc };
   });
+}
+
+function getDeployVersion() {
+  const contents = readFileSync(require.resolve('pm2-deploy/deploy'), 'utf-8');
+  const lines = contents.split(/\r?\n/g);
+  const versionInfo = lines.find(it => it.startsWith('VERSION='));
+  if (!versionInfo) return;
+  const [, version] = versionInfo.split('=');
+  return version && JSON.parse(version);
 }
