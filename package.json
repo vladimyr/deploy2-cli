@@ -2,7 +2,10 @@
   "name": "deploy2-cli",
   "version": "0.0.0",
   "description": "Standalone CLI for PM2 deployment system",
-  "bin": "cli.js",
+  "bin": {
+    "deploy2-cli": "cli.js",
+    "deploy2": "cli.js"
+  },
   "files": [
     "cli.js",
     "npm-shrinkwrap.json"
