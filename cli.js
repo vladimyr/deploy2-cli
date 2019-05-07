@@ -25,10 +25,21 @@ const formatError = msg => msg.replace(/^\w*Error:\s+/, match => kleur.red().bol
 const noop = () => {};
 const parseJSON = str => JSON.parse(stripJsonComments(str));
 
+const supportsEmoji = process.platform !== 'win32' || process.env.TERM === 'xterm-256color';
+const emoji = char => supportsEmoji ? `${char} ` : '';
+
+if (supportsEmoji) {
+  Object.assign(logSymbols, {
+    info: 'ℹ️ ',
+    success: '✅ ',
+    warning: '⚠️ ',
+    error: '🚨 '
+  });
+}
+
 const logError = (msg, ...args) => console.error(logSymbols.error, formatError(format(msg, ...args)));
 const logWarning = (msg, ...args) => console.error(logSymbols.warning, format(msg, ...args));
 const logSuccess = (msg, ...args) => console.error(logSymbols.success, format(msg, ...args));
-const logInfo = (msg, ...args) => console.error(logSymbols.info, format(msg, ...args));
 
 const joycon = new JoyCon({
   files: CONFIG_FILES,
@@ -139,11 +150,10 @@ function program(cli) {
     ].join(` ${SHELL_OP_AND} `);
   }
 
-  logInfo(
-    'Deploying to %s on host %s',
+  console.error(emoji('🚚'), format('Deploying to %s on host %s',
     kleur.cyan(env),
     kleur.cyan(envConfig.host)
-  );
+  ));
 
   const { log } = console.log;
   console.log = noop;
