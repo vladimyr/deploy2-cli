@@ -11,6 +11,7 @@ const meow = require('meow');
 const deploy = promisify(require('pm2-deploy').deployForEnv);
 const JoyCon = require('joycon');
 const path = require('path');
+const pFinally = require('p-finally');
 const pkg = require('./package.json');
 
 const stripJsonComments = require('strip-json-comments');
@@ -187,7 +188,7 @@ function program(cli) {
       return console.error(emoji('⚙️'), format(msg, kleur.cyan(envConfig.host)));
     }
   };
-  return deploy(config, env, cli.input).finally(() => (console.log = log));
+  return pFinally(deploy(config, env, cli.input), () => (console.log = log));
 }
 
 function loadConfig(filepath) {

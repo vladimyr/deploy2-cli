@@ -34,6 +34,7 @@
     "kleur": "^3.0.3",
     "log-symbols": "^3.0.0",
     "meow": "^5.0.0",
+    "p-finally": "^1.0.0",
     "pm2-deploy": "^0.4.0",
     "strip-json-comments": "^3.0.1",
     "toml": "^3.0.0"
