@@ -17,6 +17,7 @@ const stripJsonComments = require('strip-json-comments');
 const toml = require('toml');
 
 const CONFIG_FILES = ['.deploy', '.deployrc.js', 'deploy.toml'];
+const LOG_PREFIX = '-->';
 const SHELL_OP_AND = '&&';
 
 const isValidationError = err => err.constructor.name === 'ValidationError';
@@ -150,13 +151,17 @@ function program(cli) {
     ].join(` ${SHELL_OP_AND} `);
   }
 
-  console.error(emoji('🚚'), format('Deploying to %s on host %s',
-    kleur.cyan(env),
-    kleur.cyan(envConfig.host)
-  ));
-
   const { log } = console.log;
-  console.log = noop;
+  console.log = msg => {
+    if (!msg.startsWith(LOG_PREFIX)) return;
+    msg = msg.replace(LOG_PREFIX, '');
+    if (msg === 'Deploying to %s environment') {
+      return console.error(emoji('🚚'), format(msg), kleur.cyan(envConfig.host));
+    }
+    if (msg === 'on host %s') {
+      return console.error(emoji('⚙️'), format(msg), kleur.cyan(envConfig.host));
+    }
+  };
   return deploy(config, env, cli.input).finally(() => (console.log = log));
 }
 
