@@ -20,6 +20,7 @@ const toml = require('toml');
 const CONFIG_FILES = ['.deployrc', '.deployrc.js', 'deploy.toml'];
 const FALLBACK_CONFIG_FILES = ['ecosystem.config.js', 'ecosystem.config.mjs', 'ecosystem.json'];
 const LOG_PREFIX = '-->';
+const PROGRAM_NAME = 'deploy2';
 const SHELL_OP_AND = '&&';
 
 const isEcosystemConfig = config => FALLBACK_CONFIG_FILES.includes(path.basename(config));
@@ -76,7 +77,7 @@ visionmedia/deploy v${kleur.bold(getDeployVersion())}
 
 const help = `
 Usage
-  $ ${pkg.name} <env> <command>
+  $ ${PROGRAM_NAME} <env> <command>
 
 Commands
 ${showCommands()}

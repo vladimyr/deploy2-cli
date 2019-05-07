@@ -15,21 +15,22 @@ $ npx vladimyr/deploy2-cli --help
 deploy2-cli v0.0.0 - Standalone CLI for PM2 deployment system
 
 Usage
-  $ deploy2-cli <env> <command>
+  $ deploy2 <env> <command>
 
 Commands
-  setup            run remote setup commands
-  revert [n]       revert to [n]th last deployment or 1
-  config [key]     output config file or [key]
-  curr[ent]        output current release commit
-  prev[ious]       output previous release commit
-  exec|run <cmd>   execute the given <cmd>
-  list             list previous deploy commits
-  ref [ref]        deploy [ref]
+  setup                  run remote setup commands
+  revert [n]             revert to [n]th last deployment or 1
+  config [key]           output config file or [key]
+  curr[ent]              output current release commit
+  prev[ious]             output previous release commit
+  exec|run <cmd>         execute the given <cmd>
+  list                   list previous deploy commits
+  ref [ref]              deploy [ref]
 
 Options
-  -h, --help       Show help
-  -v, --version    Show version number
+  -c, --config <path>    Set the path to config file
+  -h, --help             Show help
+  -v, --version          Show version number
 
 Homepage:     https://github.com/vladimyr/deploy2-cli
 Report issue: https://github.com/vladimyr/deploy2-cli/issues
