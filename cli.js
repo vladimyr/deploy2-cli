@@ -2,18 +2,18 @@
 
 'use strict';
 
+const { commands, version: deployVersion } = require('./deploy.properties.json');
 const { format, promisify } = require('util');
 const { existsSync, readFileSync } = require('fs');
+const chalk = require('chalk');
+const deploy = promisify(require('pm2-deploy').deployForEnv);
 const git = require('git-rev-sync');
-const kleur = require('kleur');
+const JoyCon = require('joycon');
 const logSymbols = require('log-symbols');
 const meow = require('meow');
-const deploy = promisify(require('pm2-deploy').deployForEnv);
-const JoyCon = require('joycon');
 const path = require('path');
 const pFinally = require('p-finally');
 const pkg = require('./package.json');
-
 const stripJsonComments = require('strip-json-comments');
 const toml = require('toml');
 
@@ -26,7 +26,7 @@ const SHELL_OP_AND = '&&';
 const isEcosystemConfig = config => FALLBACK_CONFIG_FILES.includes(path.basename(config));
 const isValidationError = err => err.constructor.name === 'ValidationError';
 const formatCode = arg => `\`${arg}\``;
-const formatError = msg => msg.replace(/^\w*Error:\s+/, match => kleur.red().bold(match));
+const formatError = msg => msg.replace(/^\w*Error:\s+/, match => chalk.red.bold(match));
 const parseJSON = str => JSON.parse(stripJsonComments(str));
 
 const supportsEmoji = process.platform !== 'win32' || process.env.TERM === 'xterm-256color';
@@ -67,15 +67,15 @@ joycon.addLoader({
   loadSync: path => require(path)
 });
 
-const description = `${kleur.bold(pkg.name)} v${pkg.version} - ${pkg.description}`;
-const version = `
-${kleur.inverse().cyan().bold(` ${pkg.name} `)} v${kleur.bold(pkg.version)}
+const description = `${chalk.bold(pkg.name)} v${pkg.version} - ${pkg.description}`;
+const version = chalk`
+{inverse.cyan.bold ${` ${pkg.name} `}} v{bold  ${pkg.version}}
 
-pm2-deploy         v${kleur.bold(require('pm2-deploy/package.json').version)}
-visionmedia/deploy v${kleur.bold(getDeployVersion())}
+pm2-deploy         v{bold ${require('pm2-deploy/package.json').version}}
+visionmedia/deploy v{bold ${deployVersion}}
 `.trim();
 
-const help = `
+const help = chalk`
 Usage
   $ ${PROGRAM_NAME} <env> <command>
 
@@ -87,8 +87,8 @@ Options
   -h, --help             Show help
   -v, --version          Show version number
 
-Homepage:     ${kleur.cyan(pkg.homepage)}
-Report issue: ${kleur.cyan(pkg.bugs.url)}`;
+Homepage:     {cyan ${pkg.homepage}}
+Report issue: {cyan ${pkg.bugs.url}}`;
 
 const flags = {
   config: { alias: 'c', type: 'string' },
@@ -135,15 +135,15 @@ function program(cli) {
     return process.exit(1);
   }
 
-  logInfo('Using deployment config:', kleur.white(configPath));
+  logInfo('Using deployment config:', chalk.white(configPath));
 
   // Check for environment definition inside config.
   const envConfig = config[env];
   if (!config[env]) {
     logError(
-      'Error: %s environment is not defined inside configuration file: %s',
-      kleur.white(env),
-      kleur.white(path.basename(configPath))
+      chalk`Error: {white %s} environment is not defined inside configuration file: {white %s}`,
+      env,
+      path.basename(configPath)
     );
     process.exit(1);
   }
@@ -152,18 +152,18 @@ function program(cli) {
   if (!envConfig.ref) {
     const ref = git.branch();
     logWarning(
-      '%s is not set, using current branch: %s',
-      kleur.white(formatCode(`${env}.ref`)),
-      kleur.white(JSON.stringify(ref))
+      chalk`{white %s} is not set, using current branch: {white %j}`,
+      formatCode(`${env}.ref`),
+      ref
     );
     envConfig.ref = ref;
   }
   if (!envConfig.repo) {
     const repo = git.remoteUrl();
     logWarning(
-      '%s is not set, using current remote: %s',
-      kleur.white(formatCode(`${env}.repo`)),
-      kleur.white(JSON.stringify(repo))
+      chalk`{white %s} is not set, using current remote: {white %j}`,
+      formatCode(`${env}.repo`),
+      repo
     );
     envConfig.repo = repo;
   }
@@ -183,10 +183,10 @@ function program(cli) {
     if (!msg.startsWith(LOG_PREFIX)) return;
     msg = msg.replace(LOG_PREFIX, '');
     if (msg === 'Deploying to %s environment') {
-      return console.error(emoji('🚚'), format(msg, kleur.cyan(envConfig.host)));
+      return console.error(emoji('🚚'), format(msg, chalk.cyan(env)));
     }
     if (msg === 'on host %s') {
-      return console.error(emoji('⚙️'), format(msg, kleur.cyan(envConfig.host)));
+      return console.error(emoji('⚙️'), format(msg, chalk.cyan(envConfig.host)));
     }
   };
   return pFinally(deploy(config, env, cli.input), () => (console.log = log));
@@ -203,28 +203,8 @@ function loadConfig(filepath) {
 }
 
 function showCommands(indent = '  ') {
-  const commands = getCommands();
   const colWidth = Math.max(...commands.map(it => it.name.length), 22);
   return commands.map(({ name, desc }) => {
     return `${indent}${name.padEnd(colWidth)} ${desc}`;
   }).join('\n');
-}
-
-function getCommands() {
-  const contents = readFileSync(require.resolve('pm2-deploy/deploy'), 'utf-8');
-  const lines = contents.split(/\r?\n/g);
-  return lines.slice(42, 50).map(line => {
-    line = line.trim();
-    const [name, desc] = line.split(/\s{2,}/);
-    return { name, desc };
-  });
-}
-
-function getDeployVersion() {
-  const contents = readFileSync(require.resolve('pm2-deploy/deploy'), 'utf-8');
-  const lines = contents.split(/\r?\n/g);
-  const versionInfo = lines.find(it => it.startsWith('VERSION='));
-  if (!versionInfo) return;
-  const [, version] = versionInfo.split('=');
-  return version && JSON.parse(version);
 }
